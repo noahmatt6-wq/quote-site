@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photo quote tool</title>
+<style>
+:root{--bg:#faf9f5;--card:#fff;--tx:#1f1e1d;--mu:#6b6a65;--bd:#e3e1d8;--ac:#c2410c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--card:#262522;--tx:#f1efe8;--mu:#a3a199;--bd:#3a3935;--ac:#f08a5d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1b19;--card:#262522;--tx:#f1efe8;--mu:#a3a199;--bd:#3a3935;--ac:#f08a5d;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:780px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:0 0 8px}
+.mu{color:var(--mu);font-size:14px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+input[type=text],input[type=number],input[type=password],textarea{width:100%;box-sizing:border-box;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:9px;font:inherit;font-size:14px}
+textarea{min-height:90px;resize:vertical}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+button.s{background:transparent;color:var(--tx);border:1px solid var(--bd);font-weight:500}
+summary{cursor:pointer;font-weight:600;font-size:15px}
+#th{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px}
+#th img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--bd)}
+.ir{display:grid;grid-template-columns:1.2fr .8fr 2fr 90px 32px;gap:6px;margin-bottom:6px}
+@media (max-width:620px){.ir{grid-template-columns:1fr 1fr}}
+.err{color:#b91c1c;font-size:14px;margin-top:8px}
+ul{margin:4px 0 0;padding-left:20px;font-size:14px}
+#paper{border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.bars{display:flex;gap:4px;align-items:flex-end;height:50px;margin-top:8px}.bars div{flex:1;background:var(--ac);border-radius:3px 3px 0 0;min-height:4px}.nt{margin-bottom:12px;font-size:13px}
+@media print{body>main>*:not(#qwrap){display:none}#qwrap>*:not(#paper){display:none}#paper{border:0}}
+</style></head>
+<body><main>
+<h1>Photo quote tool</h1>
+<p class="mu">Photos in, draft quote out. You edit it, approve it, and the AI learns how you price.</p>
+<div class="card"><div id="stats"></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button class="s" id="bk">Back up learning</button><label class="mu" style="margin:0">Restore: <input type="file" id="rs" accept=".json"></label></div></div>
+
+<details class="card"><summary>Your shop details</summary>
+<div class="g2" style="margin-top:10px">
+<input type="text" id="sn" placeholder="Shop name">
+<input type="text" id="sp" placeholder="Phone">
+<input type="text" id="se" placeholder="Email">
+<input type="text" id="sa" placeholder="ABN">
+</div><input type="text" id="sd" placeholder="Address" style="margin-top:8px"><input type="password" id="pw" placeholder="Access password" style="margin-top:8px">
+<p class="mu" style="margin:8px 0 0">Saved on this device.</p></details>
+
+<div class="card"><h2>Customer and vehicle</h2>
+<div class="g2">
+<input type="text" id="cn" placeholder="Customer name">
+<input type="text" id="cp" placeholder="Phone or email">
+<input type="text" id="cr" placeholder="Rego">
+<input type="text" id="cv" placeholder="2019 Mazda 3 hatch">
+</div></div>
+
+<div class="card"><h2>Damage photos</h2>
+<div id="dz" style="border:2px dashed var(--bd);border-radius:12px;padding:28px 12px;text-align:center;cursor:pointer"><div id="dzt" style="font-size:15px">Drag photos here, or paste them with Ctrl+V</div><div class="mu" style="margin:4px 0 0">On a phone, tap here to pick from your photos</div></div><input type="file" id="f" accept="image/*" multiple style="display:none"><div id="th"></div><button class="s" id="cp2" style="margin-top:8px">Clear photos</button>
+<p class="mu" style="margin:8px 0 0">Up to 6. Front, rear, both sides and a close-up of the damage.</p></div>
+
+<details class="card"><summary>Your rate card</summary>
+<textarea id="r" style="min-height:190px;margin-top:10px">Panel labour: $95/hr. Paint labour: $95/hr. Paint materials: $150-300 per panel.
+Minor scratch or scuff, spot repair: $300-600
+Small dent, paintless repair: $150-500
+Bumper scuff repair and respray: $600-1,200
+Bumper replace and paint (parts extra): $1,200-2,500
+Door dent repair and paint: $800-1,800
+Guard repair or replace and paint: $900-2,000
+Bonnet repaint or dent: $1,000-2,500
+Quarter panel dent and paint: $1,500-3,500
+Add 30-50% for European, luxury or aluminium panels.
+Sensor or camera recalibration: $200-600.
+Prices include GST and are for repair plus paint; parts are extra when replacing.</textarea></details>
+
+<button id="go">Generate draft quote</button>
+<div id="e" class="err"></div>
+
+<div id="qwrap" style="display:none;margin-top:18px">
+<div class="card"><h2>Check and edit the lines</h2>
+<p class="mu">Prices include GST. Change anything before sending.</p>
+<div id="rows"></div>
+<button class="s" id="add">Add line</button></div>
+<div class="card"><h2>Possible secondary damage</h2><p class="mu">What may be damaged behind the visible area. Ticked items show on the quote as possible extras, not in the total. Untick any you do not want to show.</p><div id="sec"></div></div>
+<div class="card"><h2>For you only (not on the quote)</h2>
+<div id="int"></div></div>
+<div class="card"><h2>Terms on the quote</h2><textarea id="tm"></textarea></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+<button id="ap">Approve and save to learning</button><button class="s" id="dl">Download quote</button><button class="s" id="pr">Print or save as PDF</button></div>
+<div id="paper"></div>
+<p class="mu" style="margin-top:10px">Downloaded quotes open in any browser. Use Print, then Save as PDF to email it.</p>
+</div>
+</main>
+<script>
+window.claude={use:async function(n){if(n!=='downloads')return null;return{save:async function(o){var b=new Blob([o.data],{type:/json$/.test(o.filename)?'application/json':'text/html'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=o.filename;document.body.appendChild(a);a.click();a.remove()}}}};
+var $=function(i){return document.getElementById(i)};
+var items=[],files=[],photos=[],qno='',removed=[],sec=[];
+var PS='.q{font:14px/1.5 Arial,Helvetica,sans-serif;color:#1a1a1a;background:#fff;padding:32px;max-width:720px;margin:0 auto}.q h1{font-size:22px;margin:0}.q .hd{display:flex;justify-content:space-between;gap:16px;border-bottom:3px solid #c2410c;padding-bottom:14px;margin-bottom:18px}.q .r{text-align:right}.q .g{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}.q h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#666;margin:0 0 4px}.q table{width:100%;border-collapse:collapse}.q th{background:#f3f1ec;text-align:left;font-size:12px;padding:8px}.q td{padding:8px;border-bottom:1px solid #e5e2da;vertical-align:top}.q .n{text-align:right;white-space:nowrap}.q .tt{margin-left:auto;width:260px;margin-top:10px}.q .tt div{display:flex;justify-content:space-between;padding:3px 0}.q .tb{font-weight:700;font-size:17px;border-top:2px solid #1a1a1a;margin-top:4px;padding-top:6px}.q .ph{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.q .ph img{width:110px;height:80px;object-fit:cover;border-radius:4px}.q .tm{font-size:11px;color:#555;border-top:1px solid #e5e2da;margin-top:20px;padding-top:10px;white-space:pre-line}';
+var st=document.createElement('style');st.textContent=PS;document.head.appendChild(st);
+$('tm').value='This is an estimate based on photographs and visible damage only. The final price is confirmed after a physical inspection.\nAny additional damage found during repair will be quoted and approved by you before work continues.\nPrices include GST. This quote is valid for 14 days. Parts and paint prices may change.\nInsurance work is subject to insurer approval.';
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+function money(n){return '$'+(Number(n)||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2})}
+var sk=['sn','sp','se','sa','sd','pw'];
+try{var sv=JSON.parse(localStorage.getItem('shopinfo')||'{}');sk.forEach(function(k){if(sv[k])$(k).value=sv[k]})}catch(e){}
+sk.forEach(function(k){$(k).addEventListener('input',function(){try{var o={};sk.forEach(function(x){o[x]=$(x).value});localStorage.setItem('shopinfo',JSON.stringify(o))}catch(e){}paper()})});
+['cn','cp','cr','cv','tm'].forEach(function(k){$(k).addEventListener('input',paper)});
+function small(f,m){return new Promise(function(res){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,(m||480)/Math.max(im.width,im.height));var c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',m?0.8:0.7))};im.onerror=function(){res('')};im.src=r.result};r.readAsDataURL(f)})}
+async function addFiles(list){
+  var add=Array.prototype.slice.call(list||[]).filter(function(f){return /^image\//.test(f.type)});
+  if(!add.length)return;
+  files=files.concat(add).slice(0,6);$('th').innerHTML='';
+  files.forEach(function(f){var i=document.createElement('img');i.src=URL.createObjectURL(f);i.alt='Damage photo';$('th').appendChild(i)});
+  $('dzt').textContent=files.length+' photo'+(files.length===1?'':'s')+' added. Drop or paste more.';
+  photos=(await Promise.all(files.map(small))).filter(Boolean);
+}
+$('f').addEventListener('change',function(e){addFiles(e.target.files);e.target.value=''});
+$('dz').addEventListener('click',function(){$('f').click()});
+$('cp2').onclick=function(){files=[];photos=[];$('th').innerHTML='';$('dzt').textContent='Drag photos here, or paste them with Ctrl+V'};
+document.addEventListener('dragover',function(e){e.preventDefault();$('dz').style.borderColor='var(--ac)'});
+document.addEventListener('dragleave',function(){$('dz').style.borderColor='var(--bd)'});
+document.addEventListener('drop',function(e){e.preventDefault();$('dz').style.borderColor='var(--bd)';addFiles(e.dataTransfer&&e.dataTransfer.files)});
+document.addEventListener('paste',function(e){var fs=[];Array.prototype.forEach.call((e.clipboardData&&e.clipboardData.items)||[],function(it){if(it.kind==='file'){var f=it.getAsFile();if(f)fs.push(f)}});if(fs.length)addFiles(fs)});
+function totals(){var t=items.reduce(function(a,i){return a+(Number(i.price)||0)},0);var g=t/11;return{t:t,g:g,x:t-g}}
+function body(){
+  var s={n:$('sn').value||'Your shop name',p:$('sp').value,e:$('se').value,a:$('sa').value,d:$('sd').value},T=totals(),dt=new Date(),vd=new Date(Date.now()+14*864e5);
+  var f=function(d){return d.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})};
+  var rows=items.map(function(i){return '<tr><td>'+esc(i.panel)+'</td><td>'+esc(i.work)+'</td><td>'+esc(i.desc)+'</td><td class="n">'+money(i.price)+'</td></tr>'}).join('');
+  return '<div class="q"><div class="hd"><div><h1>'+esc(s.n)+'</h1>'+(s.d?esc(s.d)+'<br>':'')+[s.p,s.e].filter(Boolean).map(esc).join(' · ')+(s.a?'<br>ABN '+esc(s.a):'')+'</div><div class="r"><h1>Quote</h1>No. '+qno+'<br>Date: '+f(dt)+'<br>Valid until: '+f(vd)+'</div></div>'
+  +'<div class="g"><div><h3>Prepared for</h3>'+esc($('cn').value||'Customer')+'<br>'+esc($('cp').value)+'</div><div><h3>Vehicle</h3>'+esc($('cv').value)+'<br>Rego: '+esc($('cr').value)+'</div></div>'
+  +'<table><tr><th>Panel</th><th>Work</th><th>Description</th><th class="n">Price</th></tr>'+rows+'</table>'
+  +'<div class="tt"><div><span>Subtotal (ex GST)</span><span>'+money(T.x)+'</span></div><div><span>GST</span><span>'+money(T.g)+'</span></div><div class="tb"><span>Total (inc GST)</span><span>'+money(T.t)+'</span></div></div>'
+  +secHTML()+(photos.length?'<div class="ph">'+photos.slice(0,4).map(function(p){return '<img src="'+p+'" alt="Damage photo">'}).join('')+'</div>':'')
+  +'<div class="tm">'+esc($('tm').value)+'</div></div>';
+}
+function paper(){$('paper').innerHTML=body()}
+function rowsUI(){
+  $('rows').innerHTML='';
+  items.forEach(function(it,n){
+    var d=document.createElement('div');d.className='ir';
+    [['panel','text','Panel'],['work','text','Work'],['desc','text','Description'],['price','number','Price']].forEach(function(c){
+      var i=document.createElement('input');i.type=c[1];i.placeholder=c[2];i.value=it[c[0]];if(c[1]==='number'){i.step='10';i.min='0'}
+      i.addEventListener('input',function(){it[c[0]]=c[1]==='number'?Number(i.value):i.value;paper()});d.appendChild(i)});
+    var x=document.createElement('button');x.className='s';x.textContent='×';x.setAttribute('aria-label','Remove line');
+    x.onclick=function(){if(it.aiPrice!=null)removed.push(it);items.splice(n,1);rowsUI();paper()};d.appendChild(x);var w=document.createElement('div');w.appendChild(d);var nt=document.createElement('input');nt.type='text';nt.className='nt';nt.placeholder='Why did you change this? (optional, teaches the AI)';nt.value=it.note||'';nt.addEventListener('input',function(){it.note=nt.value});w.appendChild(nt);$('rows').appendChild(w)});
+}
+function hist(){try{return JSON.parse(localStorage.getItem('qhist')||'[]')}catch(e){return[]}}
+function saveH(h){try{localStorage.setItem('qhist',JSON.stringify(h.slice(-200)))}catch(e){$('e').textContent='Could not save on this device. Use Back up learning to keep a copy.'}}
+function key(p){return String(p||'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\b(front|rear|left|right|lh|rh|upper|lower)\b/g,'').trim()}
+function sum(a,f){return a.reduce(function(t,x){return t+(Number(f(x))||0)},0)}
+function learnText(){
+  var h=hist();if(!h.length)return '';var g={};
+  h.forEach(function(q){q.lines.forEach(function(l){if(l.aiPrice>0&&l.finalPrice>0){var k=key(l.panel);(g[k]=g[k]||[]).push(l.finalPrice/l.aiPrice)}})});
+  var cal=Object.keys(g).filter(function(k){return g[k].length>=2}).map(function(k){var a=sum(g[k],function(x){return x})/g[k].length;return '- '+k+': this estimator usually ends '+Math.round(Math.abs(a-1)*100)+'% '+(a>=1?'higher':'lower')+' than first drafts ('+g[k].length+' quotes)'}).join('\n');
+  var ex=h.slice(-10).map(function(q){return q.vehicle+': '+q.lines.map(function(l){return l.panel+' '+l.finalWork+' final $'+l.finalPrice+(l.aiPrice!==l.finalPrice?' (draft was $'+l.aiPrice+')':'')+(l.note?' ['+l.note+']':'')}).join('; ')}).join('\n');
+  return '\n\nLearn from this estimator\'s past corrections and match their final prices and style.\nTypical adjustments:\n'+(cal||'- not enough data yet')+'\nRecent approved quotes:\n'+ex;
+}
+function renderStats(){
+  var h=hist(),last=h.slice(-10);
+  if(!h.length){$('stats').innerHTML='<h2>AI accuracy</h2><p class="mu" style="margin:0">No quotes saved yet. Every quote you approve teaches the AI how you price.</p>';return}
+  var d=function(q){return q.aiTotal>0?Math.abs(q.finalTotal-q.aiTotal)/q.aiTotal:1};
+  var close=last.filter(function(q){return d(q)<=0.05}).length,pct=Math.round(close/last.length*100),avg=Math.round(sum(last,d)/last.length*100);
+  var msg=last.length<10?'Save at least 10 quotes for a reliable score.':(pct>=80?'The AI is matching you. You can read quotes through instead of rebuilding them.':'Keep correcting it. It is still learning your pricing.');
+  $('stats').innerHTML='<h2>AI accuracy</h2><div style="font-size:14px">'+h.length+' quotes saved. Last '+last.length+': '+pct+'% within 5% of your final price, average gap '+avg+'%.</div><div class="bars">'+last.map(function(q){return '<div style="height:'+Math.max(4,Math.round((100-Math.min(100,d(q)*100))*0.5))+'px"></div>'}).join('')+'</div><p class="mu" style="margin:8px 0 0">'+msg+'</p>';
+}
+$('ap').onclick=function(){
+  if(!items.length){$('e').textContent='Generate a quote first.';return}
+  var lines=items.map(function(i){return{panel:i.panel,aiWork:i.aiWork||'',aiPrice:i.aiPrice||0,finalWork:i.work,finalPrice:Number(i.price)||0,note:i.note||''}}).concat(removed.map(function(i){return{panel:i.panel,aiWork:i.aiWork||'',aiPrice:i.aiPrice||0,finalWork:'Removed',finalPrice:0,note:i.note||''}}));
+  var h=hist().filter(function(q){return q.no!==qno});
+  h.push({no:qno,date:Date.now(),vehicle:$('cv').value||'',lines:lines,aiTotal:sum(lines,function(l){return l.aiPrice}),finalTotal:sum(lines,function(l){return l.finalPrice})});
+  saveH(h);$('ap').textContent='Saved. The AI will learn from this';renderStats();
+};
+$('bk').onclick=async function(){try{var dd=await claude.use('downloads');if(!dd)throw 0;await dd.save({filename:'quote-learning.json',data:JSON.stringify(hist())})}catch(e){if(!(e&&e.code==='declined'))$('e').textContent='Backup is not available here.'}};
+$('rs').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var a=JSON.parse(r.result);if(Array.isArray(a)){saveH(a);renderStats()}}catch(x){$('e').textContent='That file could not be read.'}};r.readAsText(f)});
+renderStats();
+$('add').onclick=function(){items.push({panel:'',work:'Repair',desc:'',price:0});rowsUI();paper()};
+function secUI(){
+  var b=$('sec');b.innerHTML='';
+  if(!sec.length){b.innerHTML='<p class="mu" style="margin:0">None flagged.</p>';return}
+  sec.forEach(function(s){
+    var d=document.createElement('div');d.style.cssText='border-bottom:1px solid var(--bd);padding:8px 0';
+    var l=document.createElement('label');l.style.cssText='display:flex;gap:8px;align-items:flex-start;font-size:14px';
+    var c=document.createElement('input');c.type='checkbox';c.checked=s.on;c.addEventListener('change',function(){s.on=c.checked;paper()});
+    var t=document.createElement('span');t.textContent=s.item+' (behind '+s.behind+', '+s.lk+' likelihood). '+s.reason;
+    l.appendChild(c);l.appendChild(t);d.appendChild(l);
+    var r=document.createElement('div');r.style.cssText='display:flex;gap:6px;margin-top:6px';
+    [['lo','Low $'],['hi','High $']].forEach(function(k){var i=document.createElement('input');i.type='number';i.placeholder=k[1];i.value=s[k[0]];i.step='10';i.addEventListener('input',function(){s[k[0]]=Number(i.value)||0;paper()});r.appendChild(i)});
+    d.appendChild(r);b.appendChild(d)});
+}
+function secHTML(){
+  var a=sec.filter(function(s){return s.on});if(!a.length)return '';
+  var lo=sum(a,function(s){return s.lo}),hi=sum(a,function(s){return s.hi});
+  return '<h3 style="margin-top:20px">Possible additional damage (not included in the total above)</h3><p style="margin:0 0 6px;font-size:12px;color:#555">Damage behind the visible area cannot be confirmed until the panels are removed. We will contact you for approval before doing any extra work.</p><table><tr><th>Item</th><th>Why we are checking</th><th>Likelihood</th><th class="n">Estimated cost</th></tr>'+a.map(function(s){return '<tr><td>'+esc(s.item)+'<br><span style="color:#666;font-size:12px">behind '+esc(s.behind)+'</span></td><td>'+esc(s.reason)+'</td><td>'+esc(s.lk)+'</td><td class="n">'+money(s.lo)+' to '+money(s.hi)+'</td></tr>'}).join('')+'</table><p style="margin:6px 0 0;font-size:12px"><b>If all were confirmed: '+money(lo)+' to '+money(hi)+' extra (inc GST).</b></p>';
+}
+$('pr').onclick=function(){try{window.print()}catch(e){$('e').textContent='Printing is blocked here. Download the quote and print it from your browser.'}};
+$('dl').onclick=async function(){
+  try{var d=await claude.use('downloads');if(!d){throw 0}
+    await d.save({filename:'Quote-'+qno+'.html',data:'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quote '+qno+'</title><style>body{margin:0;background:#fff}'+PS+'</style></head><body>'+body()+'</body></html>'})
+  }catch(e){if(e&&e.code==='declined')return;$('e').textContent='Download is not available here. Use Print or save as PDF instead.'}
+};
+function list(a){return (a&&a.length)?'<ul>'+a.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul>':'<p class="mu" style="margin:4px 0 0">None.</p>'}
+$('go').onclick=async function(){
+  $('e').textContent='';
+  if(!files.length){$('e').textContent='Add at least one photo first.';return}
+  var b=$('go');b.disabled=true;b.textContent='Reading photos…';
+  try{
+            var pr='You are an experienced estimator at an Australian smash repair shop. Look at the attached damage photos and write a DRAFT estimate for a human estimator to check.\n\nVehicle: '+($('cv').value||'not given')+'\n\nShop rate card:\n'+$('r').value+learnText()+'\n\nRules: price the visible damage from the rate card only. Never put guesses in panels. For each damaged area, think like an experienced estimator about what sits behind it (reinforcement bars, absorbers, brackets, radiator support, headlights, parking sensors, cameras, wheel arch liners, inner structure, aluminium panels) and list likely secondary damage under secondary with a likelihood and a cost range from the rate card or typical shop rates. Give at most 6 secondary items and do not repeat visible panels. List what you cannot see under check_on_inspection and missing or poor photos under missing_photos. Return ONLY JSON: {"panels":[{"panel":"","action":"Repair|Replace|Paint only","damage":"short customer-friendly description","price_low":0,"price_high":0}],"secondary":[{"item":"","behind":"","reason":"short customer-friendly reason","likelihood":"low|medium|high","price_low":0,"price_high":0}],"check_on_inspection":[""],"missing_photos":[""]}';
+    var imgs=await Promise.all(files.map(function(f){return small(f,1280)}));var resp=await fetch('/api/quote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:$('pw').value,prompt:pr,images:imgs})});var j=await resp.json();if(!resp.ok)throw {message:j.error||'Request failed.'};var r=j;
+    removed=[];$('ap').textContent='Approve and save to learning';items=(r.panels||[]).map(function(p){var pc=Math.round(((Number(p.price_low)||0)+(Number(p.price_high)||0))/20)*10;return{panel:p.panel,work:p.action,desc:p.damage,price:pc,aiWork:p.action,aiPrice:pc,note:''}});
+    qno='Q'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.floor(100+Math.random()*900);
+    $('int').innerHTML='<p style="margin:0;font-size:14px;font-weight:600">Check on inspection</p>'+list(r.check_on_inspection)+'<p style="margin:10px 0 0;font-size:14px;font-weight:600">Photos to request</p>'+list(r.missing_photos);
+    $('qwrap').style.display='block';sec=(r.secondary||[]).map(function(s){return{item:s.item,behind:s.behind,reason:s.reason,lk:s.likelihood,lo:Number(s.price_low)||0,hi:Number(s.price_high)||0,on:s.likelihood!=='low'}});secUI();rowsUI();paper();$('qwrap').scrollIntoView();
+  }catch(err){$('e').textContent=(err&&err.message)||'Something went wrong. Try again.'}
+  b.disabled=false;b.textContent='Generate draft quote';
+};
+</script></body></html>
