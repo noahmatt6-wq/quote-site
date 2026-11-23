@@ -1,1 +1,7 @@
-{ "functions": { "api/quote.js": { "maxDuration": 60 } } }
+{
+  "functions": {
+    "api/quote.js": { "maxDuration": 60 },
+    "api/quote-v2.js": { "maxDuration": 60 }
+  },
+  "rewrites": [{ "source": "/", "destination": "/estimator.html" }]
+}
