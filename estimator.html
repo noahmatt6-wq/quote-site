@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estimator</title>
+<style>
+:root{--bg:#f2f1ec;--ink:#1c2226;--mut:#66707a;--line:#d5d2c9;--card:#fff;--acc:#0e5a6b;--warn:#b0440c}
+@media(prefers-color-scheme:dark){:root{--bg:#15191c;--ink:#e7e5e0;--mut:#98a2ab;--line:#333b41;--card:#1e2428;--acc:#5fc2d8;--warn:#f08a50}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,sans-serif;padding:16px;max-width:860px;margin-inline:auto}
+h1{font-size:1.4rem;margin:.2em 0 .6em}h2{font-size:1.05rem;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:8px 0 3px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+button{font:inherit;cursor:pointer;border:1px solid var(--acc);background:var(--acc);color:var(--card);border-radius:4px;padding:9px 14px}
+button.s{background:none;color:var(--acc);padding:4px 10px;font-size:.85rem}
+button:disabled{opacity:.5}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.row{display:grid;grid-template-columns:1fr 80px 28px;gap:6px;margin-bottom:6px;align-items:center}
+.row.p{grid-template-columns:1fr 80px 56px 80px 28px}
+.row.p input:nth-child(2){min-width:0}
+.x{background:none;border:none;color:var(--mut);padding:0}
+.lo{border-color:var(--warn)}
+.tot{display:grid;grid-template-columns:1fr auto;gap:2px 16px}.tot b{font-size:1.1rem}
+.err{color:var(--warn);font-weight:600}.mut{color:var(--mut);font-size:.85rem}
+@media(max-width:560px){.row.p{grid-template-columns:1fr 1fr 28px}}
+</style></head><body>
+<h1>Repair estimator</h1>
+
+<div class="card"><h2>New estimate</h2>
+<label>Password</label><input id="pw" type="password" autocomplete="current-password">
+<div class="g"><div><label>Vehicle (make, model, year)</label><input id="veh"></div>
+<div><label>Rego (optional)</label><input id="rego"></div></div>
+<label>What happened / damage notes</label><textarea id="desc" rows="3"></textarea>
+<label>Photos (up to 8 recommended)</label><input id="ph" type="file" accept="image/*" multiple>
+<p><button id="go">Get estimate</button> <span id="msg" class="mut"></span></p></div>
+
+<div class="card"><div class="head"><h2>Shop rates (saved on this device)</h2></div>
+<div class="g"><div><label>Labour $/hr</label><input id="r_lab" type="number" min="0" step="0.01"></div>
+<div><label>Paint $/hr</label><input id="r_pnt" type="number" min="0" step="0.01"></div>
+<div><label>Materials $ per paint hr</label><input id="r_mat" type="number" min="0" step="0.01"></div></div>
+<label>Standard misc lines, one per line as: DESCRIPTION | price</label>
+<textarea id="r_misc" rows="3" placeholder="BOOTH ALLOWANCE | 0"></textarea></div>
+
+<div id="out"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'$'+(n||0).toFixed(2);
+const SEC=[['parts','Parts'],['remove_refit','Remove + refit'],['repair','Repair'],['paint','Paint']];
+let est=null;
+
+// rates
+const RK=['r_lab','r_pnt','r_mat','r_misc'];
+try{const s=JSON.parse(localStorage.getItem('rates')||'{}');RK.forEach(k=>{if(s[k]!=null)$('#'+k).value=s[k]})}catch(e){}
+RK.forEach(k=>$('#'+k).addEventListener('input',()=>{
+  try{localStorage.setItem('rates',JSON.stringify(Object.fromEntries(RK.map(x=>[x,$('#'+x).value]))))}catch(e){}
+  totals()}));
+
+// photos: shrink before upload so the request stays small
+async function shrink(f,max=1280,q=0.7){
+  const b=await createImageBitmap(f),sc=Math.min(1,max/Math.max(b.width,b.height));
+  const c=document.createElement('canvas');c.width=Math.round(b.width*sc);c.height=Math.round(b.height*sc);
+  c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
+
+$('#go').onclick=async()=>{
+  const files=[...$('#ph').files],msg=$('#msg');msg.className='mut';
+  if(!files.length){msg.textContent='Add at least one photo.';msg.className='err';return}
+  $('#go').disabled=true;msg.textContent='Reading photos...';
+  try{
+    const images=await Promise.all(files.map(f=>shrink(f)));
+    const prompt='Vehicle: '+($('#veh').value||'not given')+(($('#rego').value)?' ('+$('#rego').value+')':'')+'\nDamage notes: '+($('#desc').value||'none');
+    const body=JSON.stringify({password:$('#pw').value,prompt,images});
+    if(body.length>4300000)throw new Error('Photos are too big. Use fewer photos.');
+    msg.textContent='Working out the estimate (can take a minute)...';
+    const r=await fetch('/api/quote-v2',{method:'POST',headers:{'content-type':'application/json'},body});
+    let j;try{j=await r.json()}catch(e){throw new Error('Server error ('+r.status+'). Try fewer photos.')}
+    if(!r.ok)throw new Error(j.error||'Request failed.');
+    est=j;render();msg.textContent='Done. Check every line before using it.';
+  }catch(e){msg.textContent=e.message;msg.className='err'}
+  $('#go').disabled=false};
+
+function rowHTML(k,r,i){
+  const c=r.confidence==='low'?' lo':'',a=`data-k="${k}" data-i="${i}"`;
+  if(k==='parts')return `<div class="row p"><input ${a} data-f="description" value="${esc(r.description)}" class="${c}">
+  <input ${a} data-f="condition" value="${esc(r.condition||'New')}"><input ${a} data-f="qty" type="number" min="0" value="${r.qty??1}">
+  <input ${a} data-f="est_price" type="number" min="0" step="0.01" value="${r.est_price??''}" placeholder="$"><button class="x" data-del="${k}:${i}" aria-label="Delete line">✕</button></div>`;
+  return `<div class="row"><input ${a} data-f="description" value="${esc(r.description)}" class="${c}">
+  <input ${a} data-f="hours" type="number" min="0" step="0.1" value="${r.hours??0}"><button class="x" data-del="${k}:${i}" aria-label="Delete line">✕</button></div>`}
+
+function render(){
+  const o=$('#out');if(!est){o.innerHTML='';return}
+  let h='';
+  if(est.photo_matches_vehicle===false)h+='<div class="card err">The photos may not match the vehicle entered. Check before using this estimate.</div>';
+  SEC.forEach(([k,t])=>{est[k]=est[k]||[];
+    h+=`<div class="card"><div class="head"><h2>${t}</h2><span><button class="s" data-add="${k}">Add line</button> <button class="s" data-copy="${k}">Copy</button></span></div>
+    ${est[k].map((r,i)=>rowHTML(k,r,i)).join('')||'<p class="mut">No lines.</p>'}</div>`});
+  h+='<div class="card"><div class="head"><h2>Totals (excl. GST)</h2></div><div class="tot" id="tot"></div><p class="mut">Estimate only. The estimator confirms all figures. Lines outlined in orange are low confidence.</p></div>';
+  const ad=est.possible_additional_damage||[];
+  if(ad.length)h+=`<div class="card"><h2>Possible additional damage</h2>${ad.map(d=>`<p><b>${esc(d.item)}</b> (${esc(d.likelihood)}, ${esc(d.est_cost_range)})<br><span class="mut">${esc(d.reason)}</span></p>`).join('')}</div>`;
+  if(est.estimator_notes)h+=`<div class="card"><h2>Notes</h2><p>${esc(est.estimator_notes)}</p></div>`;
+  o.innerHTML=h;totals()}
+
+function totals(){
+  const t=$('#tot');if(!t||!est)return;
+  const sum=a=>(a||[]).reduce((s,x)=>s+(+x.hours||0),0),n=id=>+$('#'+id).value||0;
+  const lab=sum(est.repair)+sum(est.remove_refit),pnt=sum(est.paint);
+  const parts=(est.parts||[]).reduce((s,p)=>s+(+p.est_price||0)*(+p.qty||0),0);
+  const misc=$('#r_misc').value.split('\n').map(l=>+(l.split('|')[1]||0)||0).reduce((a,b)=>a+b,0);
+  const L=lab*n('r_lab'),P=pnt*n('r_pnt'),M=pnt*n('r_mat'),T=L+P+M+parts+misc;
+  t.innerHTML=`<span>Labour ${lab.toFixed(1)} hrs</span><span>${money(L)}</span><span>Paint ${pnt.toFixed(1)} hrs</span><span>${money(P)}</span>
+  <span>Paint materials</span><span>${money(M)}</span><span>Parts</span><span>${money(parts)}</span><span>Misc lines</span><span>${money(misc)}</span><b>Total</b><b>${money(T)}</b>`}
+
+$('#out').addEventListener('input',e=>{const d=e.target.dataset;if(!d.k)return;
+  est[d.k][d.i][d.f]=e.target.type==='number'?(e.target.value===''?null:+e.target.value):e.target.value;totals()});
+$('#out').addEventListener('click',e=>{const d=e.target.dataset;
+  if(d.del){const[k,i]=d.del.split(':');est[k].splice(+i,1);render()}
+  if(d.add){est[d.add].push(d.add==='parts'?{description:'',condition:'New',qty:1,est_price:null}:{description:'',hours:0});render()}
+  if(d.copy){const k=d.copy;const txt=est[k].map(r=>k==='parts'?[r.description,r.condition||'New',r.qty??1,r.est_price??''].join('\t'):[r.description,r.hours??0].join('\t')).join('\n');
+    navigator.clipboard.writeText(txt).then(()=>{e.target.textContent='Copied';setTimeout(()=>e.target.textContent='Copy',1200)})}});
+</script></body></html>
