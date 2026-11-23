@@ -43,6 +43,8 @@ button:disabled{opacity:.5}
 <label>Standard misc lines, one per line as: DESCRIPTION | price</label>
 <textarea id="r_misc" rows="3" placeholder="BOOTH ALLOWANCE | 0"></textarea></div>
 
+<div class="card"><div class="head"><h2>Learning</h2><span><button class="s" id="bk">Back up learning</button> <label style="display:inline;cursor:pointer;border:1px solid var(--acc);border-radius:4px;padding:4px 10px;color:var(--acc);font-size:.85rem">Restore<input id="rs" type="file" accept=".json" hidden></label></span></div><p class="mut" id="lc"></p></div>
+
 <div id="out"></div>
 
 <script>
@@ -50,7 +52,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const money=n=>'$'+(n||0).toFixed(2);
 const SEC=[['parts','Parts'],['remove_refit','Remove + refit'],['repair','Repair'],['paint','Paint']];
-let est=null;
+let est=null,orig=null;
 
 // rates
 const RK=['r_lab','r_pnt','r_mat','r_misc'];
@@ -71,14 +73,14 @@ $('#go').onclick=async()=>{
   $('#go').disabled=true;msg.textContent='Reading photos...';
   try{
     const images=await Promise.all(files.map(f=>shrink(f)));
-    const prompt='Vehicle: '+($('#veh').value||'not given')+(($('#rego').value)?' ('+$('#rego').value+')':'')+'\nDamage notes: '+($('#desc').value||'none');
+    const prompt='Vehicle: '+($('#veh').value||'not given')+(($('#rego').value)?' ('+$('#rego').value+')':'')+'\nDamage notes: '+($('#desc').value||'none')+learnBlock();
     const body=JSON.stringify({password:$('#pw').value,prompt,images});
     if(body.length>4300000)throw new Error('Photos are too big. Use fewer photos.');
     msg.textContent='Working out the estimate (can take a minute)...';
     const r=await fetch('/api/quote-v2',{method:'POST',headers:{'content-type':'application/json'},body});
     let j;try{j=await r.json()}catch(e){throw new Error('Server error ('+r.status+'). Try fewer photos.')}
     if(!r.ok)throw new Error(j.error||'Request failed.');
-    est=j;render();msg.textContent='Done. Check every line before using it.';
+    est=j;orig=JSON.parse(JSON.stringify(j));render();msg.textContent='Done. Check every line before using it.';
   }catch(e){msg.textContent=e.message;msg.className='err'}
   $('#go').disabled=false};
 
@@ -97,7 +99,7 @@ function render(){
   SEC.forEach(([k,t])=>{est[k]=est[k]||[];
     h+=`<div class="card"><div class="head"><h2>${t}</h2><span><button class="s" data-add="${k}">Add line</button> <button class="s" data-copy="${k}">Copy</button></span></div>
     ${est[k].map((r,i)=>rowHTML(k,r,i)).join('')||'<p class="mut">No lines.</p>'}</div>`});
-  h+='<div class="card"><div class="head"><h2>Totals (excl. GST)</h2></div><div class="tot" id="tot"></div><p class="mut">Estimate only. The estimator confirms all figures. Lines outlined in orange are low confidence.</p></div>';
+  h+='<div class="card"><div class="head"><h2>Totals (excl. GST)</h2></div><div class="tot" id="tot"></div><p class="mut">Estimate only. The estimator confirms all figures. Lines outlined in orange are low confidence.</p><label>Why did you change anything? (optional, teaches the AI)</label><input id="why"><p><button id="ok">Approve and save to learning</button> <span id="okm" class="mut"></span></p></div>';
   const ad=est.possible_additional_damage||[];
   if(ad.length)h+=`<div class="card"><h2>Possible additional damage</h2>${ad.map(d=>`<p><b>${esc(d.item)}</b> (${esc(d.likelihood)}, ${esc(d.est_cost_range)})<br><span class="mut">${esc(d.reason)}</span></p>`).join('')}</div>`;
   if(est.estimator_notes)h+=`<div class="card"><h2>Notes</h2><p>${esc(est.estimator_notes)}</p></div>`;
@@ -120,4 +122,18 @@ $('#out').addEventListener('click',e=>{const d=e.target.dataset;
   if(d.add){est[d.add].push(d.add==='parts'?{description:'',condition:'New',qty:1,est_price:null}:{description:'',hours:0});render()}
   if(d.copy){const k=d.copy;const txt=est[k].map(r=>k==='parts'?[r.description,r.condition||'New',r.qty??1,r.est_price??''].join('\t'):[r.description,r.hours??0].join('\t')).join('\n');
     navigator.clipboard.writeText(txt).then(()=>{e.target.textContent='Copied';setTimeout(()=>e.target.textContent='Copy',1200)})}});
+
+let LEARN=[];try{LEARN=JSON.parse(localStorage.getItem('learn')||'[]')}catch(e){}
+const saveLearn=()=>{try{localStorage.setItem('learn',JSON.stringify(LEARN))}catch(e){}$('#lc').textContent=LEARN.length+' approved job'+(LEARN.length===1?'':'s')+' learned (saved on this device). Back up now and then.'};
+const fmt=e=>SEC.map(([k,t])=>(e[k]||[]).length?t+': '+e[k].map(r=>k==='parts'?r.description+' x'+(r.qty??1)+(r.est_price!=null?' $'+r.est_price:''):r.description+' '+(r.hours??0)+'h').join('; '):'').filter(Boolean).join(' | ');
+function learnBlock(){
+  if(!LEARN.length)return '';
+  return '\n\nPast jobs this shop approved. Match their wording, hours and style:\n'+LEARN.slice(-20).map(l=>'- '+l.veh+' / '+l.desc+'\n  Approved: '+l.final+(l.ai&&l.ai!==l.final?'\n  AI first draft was: '+l.ai:'')+(l.why?'\n  Why changed: '+l.why:'')).join('\n')}
+saveLearn();
+document.addEventListener('click',e=>{
+  if(e.target.id==='ok'&&est){
+    LEARN.push({veh:$('#veh').value,desc:$('#desc').value,final:fmt(est),ai:fmt(orig),why:$('#why').value,ts:Date.now()});
+    LEARN=LEARN.slice(-50);saveLearn();$('#okm').textContent='Saved. The AI will use this on the next job.'}
+  if(e.target.id==='bk'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(LEARN)],{type:'application/json'}));a.download='estimator-learning.json';a.click()}});
+$('#rs').addEventListener('change',async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!Array.isArray(d))throw 0;LEARN=d.slice(-50);saveLearn()}catch(x){$('#lc').textContent='That file is not a learning backup.'}});
 </script></body></html>
